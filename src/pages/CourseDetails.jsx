@@ -125,12 +125,11 @@ export default function CourseDetails() {
 
 
     return (
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-64px-2rem)] gap-6 lg:overflow-hidden">
-            {/* Main Content Area */}
+        <div className="flex flex-col lg:flex-row h-[calc(100dvh-5rem)] lg:h-[calc(100vh-64px-2rem)] gap-6 lg:overflow-hidden pb-4 lg:pb-0">
             {/* Main Content Area */}
             <div
                 ref={scrollContainerRef}
-                className="flex-1 flex flex-col min-h-0 overflow-y-auto" // Removed lg:overflow-y-hidden
+                className="flex-1 flex flex-col min-h-0 overflow-y-auto lg:overflow-y-hidden"
             >
                 {/* Video Player */}
                 <div className="aspect-video w-full bg-black shrink-0 rounded-lg overflow-hidden shadow-lg">
@@ -150,8 +149,8 @@ export default function CourseDetails() {
                 </div>
 
                 {/* Tabs & Content */}
-                <div className="flex flex-col mt-4" ref={tabsRef}>
-                    <div className="flex border-b border-gray-200 dark:border-gray-700 space-x-4 mb-4 overflow-x-auto shrink-0 bg-white dark:bg-gray-900 sticky top-0 z-20 py-2">
+                <div className="flex flex-col flex-1 mt-4" ref={tabsRef}>
+                    <div className="flex border-b border-gray-200 dark:border-gray-700 space-x-4 mb-4 overflow-x-auto shrink-0 bg-white dark:bg-gray-900 sticky top-0 z-20 py-2 no-scrollbar">
                         <button
                             onClick={() => handleTabChange('overview')}
                             className={`flex items-center pb-2 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'overview' ? 'border-primary-600 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
@@ -196,18 +195,18 @@ export default function CourseDetails() {
                         </button>
                     </div>
 
-                    {/* Content Container - Fixed height relative to viewport to allow "page" feel */}
-                    <div className="relative bg-white dark:bg-gray-800/50 rounded-b-lg h-[calc(100vh-140px)]">
+                    {/* Content Container - Responsive Height */}
+                    <div className="relative bg-white dark:bg-gray-800/50 rounded-b-lg h-[600px] lg:h-full min-h-[400px] flex-1">
                         {/* Overview Tab */}
                         <div className={`absolute inset-0 p-4 overflow-y-auto transition-opacity duration-300 ${activeTab === 'overview' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
                             {activeVideo && (
                                 <div className="space-y-4 animate-in fade-in duration-300">
-                                    <div className="flex items-center justify-between">
-                                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{activeVideo.title}</h1>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white line-clamp-2">{activeVideo.title}</h1>
                                         <button
                                             onClick={handleMarkCompleted}
                                             disabled={completedVideos.includes(activeVideo.id)}
-                                            className={`px-4 py-2 rounded-md font-medium text-sm flex items-center gap-2 transition-all ${completedVideos.includes(activeVideo.id) ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default' : 'bg-primary-600 text-white hover:bg-primary-700 active:scale-95'}`}
+                                            className={`w-full sm:w-auto px-4 py-2 rounded-md font-medium text-sm flex items-center justify-center gap-2 transition-all shrink-0 ${completedVideos.includes(activeVideo.id) ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default' : 'bg-primary-600 text-white hover:bg-primary-700 active:scale-95'}`}
                                         >
                                             {completedVideos.includes(activeVideo.id) ? (
                                                 <>
@@ -215,7 +214,7 @@ export default function CourseDetails() {
                                                 </>
                                             ) : (
                                                 <>
-                                                    <CheckCircle className="w-4 h-4" /> Mark as Completed (+10 XP)
+                                                    <CheckCircle className="w-4 h-4" /> Mark as Completed
                                                 </>
                                             )}
                                         </button>
@@ -287,17 +286,23 @@ export default function CourseDetails() {
             </div>
 
             {/* Sidebar: Playlist */}
-            <div className="w-full lg:w-96 flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg shadow-sm shrink-0 h-[600px] lg:h-full">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700 font-bold text-lg flex items-center gap-2 bg-gray-50 dark:bg-gray-900/50">
+            <div className="w-full lg:w-96 flex flex-col border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg shadow-sm shrink-0 h-[500px] lg:h-full">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700 font-bold text-lg flex items-center gap-2 bg-gray-50 dark:bg-gray-900/50 sticky top-0 z-10">
                     <ListVideo className="h-5 w-5 text-gray-500" />
                     <span>Course Content</span>
                     <span className="ml-auto text-xs font-normal text-gray-500 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">{videos.length} videos</span>
                 </div>
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
                     {videos.map((video, idx) => (
                         <button
                             key={video.id}
-                            onClick={() => setActiveVideo(video)}
+                            onClick={() => {
+                                setActiveVideo(video);
+                                // Optional: scroll to top on mobile when selecting new video
+                                if (window.innerWidth < 1024) {
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }
+                            }}
                             className={`w-full text-left p-4 flex gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700/50 last:border-0 ${activeVideo?.id === video.id ? 'bg-primary-50 dark:bg-primary-900/20' : ''}`}
                         >
                             <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-mono text-gray-500">

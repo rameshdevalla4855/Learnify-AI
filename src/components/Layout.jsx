@@ -39,17 +39,35 @@ export default function Layout() {
             </div>
 
             <div className="flex h-screen overflow-hidden">
+                {/* Mobile Sidebar Backdrop */}
+                <AnimatePresence>
+                    {isSidebarOpen && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsSidebarOpen(false)}
+                            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+                        />
+                    )}
+                </AnimatePresence>
+
                 {/* Sidebar */}
                 <aside className={`
-          glass-panel border-r-0 fixed inset-y-4 left-4 z-50 w-64 rounded-2xl transform transition-transform duration-200 ease-in-out
-          lg:static lg:translate-x-0 lg:h-[calc(100vh-2rem)] lg:my-4 lg:ml-4
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          glass-panel border-r-0 fixed inset-y-4 left-4 z-50 w-64 rounded-2xl transform transition-transform duration-300 ease-in-out
+          lg:static lg:translate-x-0 lg:h-[calc(100vh-2rem)] lg:my-4 lg:ml-4 flex flex-col
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-[120%]'}
         `}>
-                    <div className="flex h-full flex-col justify-between">
+                    <div className="flex h-full flex-col justify-between overflow-y-auto custom-scrollbar">
                         <div className="px-4 py-6">
-                            <span className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-purple-600 px-2 hidden lg:block mb-8">
-                                Learnify AI
-                            </span>
+                            <div className="flex items-center justify-between mb-8 lg:mb-8">
+                                <span className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-purple-600 px-2">
+                                    Learnify AI
+                                </span>
+                                <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-1 text-gray-500 hover:bg-gray-100 rounded-md">
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
 
                             <nav className="space-y-2">
                                 {navigation.map((item) => {
@@ -58,6 +76,7 @@ export default function Layout() {
                                         <Link
                                             key={item.name}
                                             to={item.href}
+                                            onClick={() => setIsSidebarOpen(false)}
                                             className={`
                         flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
                         ${isActive
@@ -97,6 +116,7 @@ export default function Layout() {
                             ) : (
                                 <Link
                                     to="/login"
+                                    onClick={() => setIsSidebarOpen(false)}
                                     className="btn-primary flex w-full justify-center rounded-xl px-4 py-3 text-sm font-bold shadow-lg"
                                 >
                                     Sign In
@@ -107,7 +127,7 @@ export default function Layout() {
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 overflow-auto p-4 lg:p-8">
+                <main className="flex-1 overflow-auto p-3 lg:p-8 relative w-full">
                     <Outlet />
                 </main>
             </div>

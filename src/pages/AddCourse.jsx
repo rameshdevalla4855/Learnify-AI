@@ -90,27 +90,27 @@ export default function AddCourse() {
                 </p>
             </div>
 
-            <div className="flex justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <button
                     onClick={() => setMode('search')}
-                    className={`flex items-center px-4 py-2 rounded-full font-medium transition-all ${mode === 'search' ? 'bg-primary-600 text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+                    className={`flex items-center justify-center px-6 py-3 rounded-full font-medium transition-all ${mode === 'search' ? 'bg-primary-600 text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
                 >
-                    <Search className="w-4 h-4 mr-2" />
+                    <Search className="w-5 h-5 mr-2" />
                     Search YouTube
                 </button>
                 <button
                     onClick={() => setMode('url')}
-                    className={`flex items-center px-4 py-2 rounded-full font-medium transition-all ${mode === 'url' ? 'bg-primary-600 text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+                    className={`flex items-center justify-center px-6 py-3 rounded-full font-medium transition-all ${mode === 'url' ? 'bg-primary-600 text-white shadow-lg scale-105' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
                 >
-                    <LinkIcon className="w-4 h-4 mr-2" />
+                    <LinkIcon className="w-5 h-5 mr-2" />
                     Paste URL
                 </button>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 min-h-[400px]">
+            <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 min-h-[400px]">
                 {mode === 'search' && (
                     <div className="space-y-6">
-                        <form onSubmit={handleSearch} className="flex gap-2">
+                        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
                             <input
                                 type="text"
                                 placeholder="Search for playlists (e.g., 'Python for Beginners')"
@@ -121,13 +121,13 @@ export default function AddCourse() {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors"
+                                className="bg-primary-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors w-full sm:w-auto flex justify-center"
                             >
                                 {loading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Search'}
                             </button>
                         </form>
 
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                             {searchResults.map(item => (
                                 <div key={item.id.playlistId} className="group relative border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-lg transition-all bg-white dark:bg-gray-800">
                                     <div className="aspect-video bg-gray-100 dark:bg-gray-900 overflow-hidden">
@@ -139,7 +139,7 @@ export default function AddCourse() {
                                         <button
                                             onClick={() => importPlaylist(item.id.playlistId)}
                                             disabled={importingId === item.id.playlistId}
-                                            className="w-full flex items-center justify-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-2 rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                                            className="w-full flex items-center justify-center gap-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-3 rounded-md text-sm font-medium hover:opacity-90 disabled:opacity-50"
                                         >
                                             {importingId === item.id.playlistId ? <Loader2 className="animate-spin w-4 h-4" /> : <Download className="w-4 h-4" />}
                                             Instant Add
