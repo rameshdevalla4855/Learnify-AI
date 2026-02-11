@@ -96,7 +96,46 @@
   background-size: 24px 24px;
 }
 
-.dark .bg-grid-pattern {
-  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  .dark .bg-grid-pattern {
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  }
+
+/* --- Social Portal Themes --- */
+
+/* Midnight Premium Theme */
+.theme-midnight body {
+    @apply bg-slate-950 text-slate-100;
+}
+
+.theme-midnight .glass-panel,
+.theme-midnight .glass-card {
+    @apply bg-slate-900/60 border-slate-700/50 shadow-none;
+}
+
+.theme-midnight .text-gradient {
+    @apply bg-gradient-to-r from-purple-400 to-cyan-400;
+}
+
+/* Royal Gold Premium Theme */
+.theme-gold body {
+    @apply bg-neutral-950 text-yellow-50;
+}
+
+.theme-gold .glass-panel,
+.theme-gold .glass-card {
+    @apply bg-neutral-900/80 border-yellow-500/20 shadow-none;
+}
+
+.theme-gold .btn-primary {
+    @apply bg-gradient-to-r from-yellow-600 to-amber-600 hover:from-yellow-500 hover:to-amber-500 text-black font-bold;
+}
+
+.theme-gold .text-primary-600,
+.theme-gold .text-primary-500 {
+    @apply text-yellow-500;
+}
+
+.theme-gold .bg-primary-50 {
+    @apply bg-yellow-900/20;
 }

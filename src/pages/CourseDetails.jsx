@@ -1,10 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, increment, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import { fetchPlaylistItems } from '../services/youtube';
-import { Loader2, ListVideo, MessageSquare, FileText, Brain, PenTool, CheckCircle, RotateCw, Code } from 'lucide-react';
+import { Loader2, ListVideo, MessageSquare, FileText, Brain, PenTool, CheckCircle, RotateCw, Code, ArrowLeft, Maximize2 } from 'lucide-react';
 import AIChat from '../components/AIChat';
 import Quiz from '../components/Quiz';
 import Notes from '../components/Notes';
@@ -13,6 +13,7 @@ import CodePlayground from '../components/CodePlayground';
 
 export default function CourseDetails() {
     const { courseId } = useParams();
+    const navigate = useNavigate();
     const [course, setCourse] = useState(null);
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -168,10 +169,17 @@ export default function CourseDetails() {
             {/* Main Content Area (Video + Tabs + Tool) */}
             <div
                 ref={scrollContainerRef}
-                className={`flex-1 flex flex-col min-h-0 ${showMobilePlaylist ? 'hidden lg:flex' : 'flex'}`}
+                className={`flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar ${showMobilePlaylist ? 'hidden lg:flex' : 'flex'}`}
             >
                 {/* Video Player Container */}
                 <div className="shrink-0 space-y-2">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors mb-2"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back
+                    </button>
                     <div className="aspect-video w-full bg-black rounded-xl overflow-hidden shadow-lg ring-1 ring-gray-900/5 dark:ring-white/10">
                         {activeVideo ? (
                             <iframe
@@ -228,55 +236,81 @@ export default function CourseDetails() {
                         ))}
                     </div>
 
-                    {/* Tab Content - Fills remaining space */}
-                    <div className="relative flex-1 bg-white dark:bg-gray-800/50 border-x border-b border-gray-200 dark:border-gray-700 rounded-b-xl overflow-hidden shadow-sm">
-                        {/* Wrapper for absolute positioning of tabs */}
-                        <div className="absolute inset-0 w-full h-full">
+                    {/* Tab Content - Fills remaining space naturally */}
+                    <div className="bg-white dark:bg-gray-800/50 border-x border-b border-gray-200 dark:border-gray-700 rounded-b-xl shadow-sm min-h-[400px]">
 
-                            {/* Overview */}
-                            <div className={`absolute inset-0 p-4 overflow-y-auto transition-opacity duration-300 custom-scrollbar ${activeTab === 'overview' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-                                {activeVideo ? (
-                                    <div className="space-y-6 max-w-3xl mx-auto">
-                                        <div className="flex flex-col gap-4">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-                                                    {activeVideo.title}
-                                                </h1>
-                                                <button
-                                                    onClick={handleMarkCompleted}
-                                                    disabled={completedVideos.includes(activeVideo.id)}
-                                                    className={`shrink-0 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-all shadow-sm ${completedVideos.includes(activeVideo.id) ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default ring-1 ring-green-500/20' : 'bg-primary-600 text-white hover:bg-primary-700 active:scale-95 shadow-primary-500/30'}`}
-                                                >
-                                                    {completedVideos.includes(activeVideo.id) ? (
-                                                        <> <CheckCircle className="w-4 h-4" /> Completed </>
-                                                    ) : (
-                                                        <> <CheckCircle className="w-4 h-4" /> Mark Complete </>
-                                                    )}
-                                                </button>
-                                            </div>
-                                            <div className="prose dark:prose-invert max-w-none prose-sm md:prose-base text-gray-600 dark:text-gray-300 leading-relaxed">
-                                                <p className="whitespace-pre-wrap">{activeVideo.description || "No description available."}</p>
-                                            </div>
+                        {/* Overview */}
+                        <div className={`p-6 transition-all duration-300 ${activeTab === 'overview' ? 'block animate-in fade-in' : 'hidden'}`}>
+                            {activeVideo ? (
+                                <div className="space-y-6 max-w-3xl mx-auto">
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+                                                {activeVideo.title}
+                                            </h1>
+                                            <button
+                                                onClick={handleMarkCompleted}
+                                                disabled={completedVideos.includes(activeVideo.id)}
+                                                className={`shrink-0 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-all shadow-sm ${completedVideos.includes(activeVideo.id) ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default ring-1 ring-green-500/20' : 'bg-primary-600 text-white hover:bg-primary-700 active:scale-95 shadow-primary-500/30'}`}
+                                            >
+                                                {completedVideos.includes(activeVideo.id) ? (
+                                                    <> <CheckCircle className="w-4 h-4" /> Completed </>
+                                                ) : (
+                                                    <> <CheckCircle className="w-4 h-4" /> Mark Complete </>
+                                                )}
+                                            </button>
+                                        </div>
+                                        <div className="prose dark:prose-invert max-w-none prose-sm md:prose-base text-gray-600 dark:text-gray-300 leading-relaxed">
+                                            <p className="whitespace-pre-wrap">{activeVideo.description || "No description available."}</p>
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="flex items-center justify-center h-full text-gray-500">
-                                        Select a video to view details
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-center h-64 text-gray-500">
+                                    Select a video to view details
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Tools (Chat, Quiz, etc) */}
+                        {['chat', 'quiz', 'notes', 'flashcards', 'code'].map(tab => (
+                            <div key={tab} className={`${activeTab === tab ? 'block animate-in fade-in' : 'hidden'}`}>
+                                {/* Code Playground works without video */}
+                                {tab === 'code' && (
+                                    <div className="h-full flex flex-col">
+                                        <div className="flex justify-between items-center mb-4 px-1">
+                                            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Course Sandbox</h3>
+                                            <button
+                                                onClick={() => navigate('/playground')}
+                                                className="text-xs flex items-center gap-1.5 text-primary-600 hover:text-primary-700 font-medium p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors"
+                                            >
+                                                <Maximize2 className="w-3.5 h-3.5" />
+                                                Open Fullscreen
+                                            </button>
+                                        </div>
+                                        <div className="flex-1 min-h-[500px] border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+                                            <CodePlayground wrapped={false} />
+                                        </div>
                                     </div>
                                 )}
-                            </div>
 
-                            {/* Tools (Chat, Quiz, etc) - These handle their own scrolling usually */}
-                            {['chat', 'quiz', 'notes', 'flashcards', 'code'].map(tab => (
-                                <div key={tab} className={`absolute inset-0 transition-opacity duration-300 ${activeTab === tab ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-                                    {activeVideo && tab === 'chat' && <AIChat key={activeVideo.id} videoTitle={activeVideo.title} videoDescription={activeVideo.description} courseTitle={course?.title} courseId={course?.id} videoId={activeVideo.id} />}
-                                    {activeVideo && tab === 'quiz' && <Quiz key={activeVideo.id} videoTitle={activeVideo.title} courseId={course?.id} videoId={activeVideo.id} />}
-                                    {activeVideo && tab === 'notes' && <Notes key={activeVideo.id} videoId={activeVideo.id} videoTitle={activeVideo.title} videoDescription={activeVideo.description} />}
-                                    {activeVideo && tab === 'flashcards' && <Flashcards key={activeVideo.id} videoId={activeVideo.id} videoTitle={activeVideo.title} />}
-                                    {tab === 'code' && <CodePlayground />}
-                                </div>
-                            ))}
-                        </div>
+                                {/* Other tools require activeVideo */}
+                                {tab !== 'code' && !activeVideo && (
+                                    <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                                        <p>Select a video from the list to use the {tab === 'chat' ? 'AI Tutor' : tab}</p>
+                                    </div>
+                                )}
+
+                                {tab !== 'code' && activeVideo && (
+                                    <>
+                                        {tab === 'chat' && <AIChat key={activeVideo.id} videoTitle={activeVideo.title} videoDescription={activeVideo.description} courseTitle={course?.title} courseId={course?.id} videoId={activeVideo.id} />}
+                                        {tab === 'quiz' && <Quiz key={activeVideo.id} videoTitle={activeVideo.title} videoDescription={activeVideo.description} courseId={course?.id} videoId={activeVideo.id} />}
+                                        {tab === 'notes' && <Notes key={activeVideo.id} videoId={activeVideo.id} videoTitle={activeVideo.title} videoDescription={activeVideo.description} />}
+                                        {tab === 'flashcards' && <Flashcards key={activeVideo.id} videoId={activeVideo.id} videoTitle={activeVideo.title} videoDescription={activeVideo.description} />}
+                                    </>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

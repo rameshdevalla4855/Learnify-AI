@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateFlashcards } from '../services/gemini';
-import { Loader2, RotateCw, Check, X, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Loader2, RotateCw, Check, X, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react';
 
-export default function Flashcards({ videoId, videoTitle }) {
+export default function Flashcards({ videoId, videoTitle, videoDescription }) {
     const [cards, setCards] = useState([]);
     const [loading, setLoading] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -14,7 +14,7 @@ export default function Flashcards({ videoId, videoTitle }) {
         setLoading(true);
         setError('');
         try {
-            const data = await generateFlashcards(videoTitle);
+            const data = await generateFlashcards(videoTitle, videoDescription);
             setCards(data.cards);
             setCurrentIndex(0);
             setIsFlipped(false);
@@ -70,7 +70,7 @@ export default function Flashcards({ videoId, videoTitle }) {
     }
 
     return (
-        <div className="flex flex-col h-full max-w-3xl mx-auto p-4 justify-center">
+        <div className="flex flex-col min-h-[500px] h-full max-w-3xl mx-auto p-4 justify-center">
             {/* Progress Bar */}
             <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                 <span>Card {currentIndex + 1} of {cards.length}</span>
@@ -83,30 +83,44 @@ export default function Flashcards({ videoId, videoTitle }) {
             </div>
 
             {/* Card Container */}
-            <div className="flex-1 perspective-1000 relative min-h-[400px]">
+            <div className="w-full h-[450px] relative perspective-1000 my-8">
                 <div
                     onClick={handleFlip}
-                    className="relative w-full h-full cursor-pointer transition-all duration-500 preserve-3d"
-                    style={{ transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)", transformStyle: "preserve-3d" }}
+                    className="relative w-full h-full cursor-pointer transition-all duration-700"
+                    style={{
+                        transformStyle: "preserve-3d",
+                        transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)"
+                    }}
                 >
                     {/* Front */}
-                    <div className="absolute inset-0 backface-hidden glass-card flex flex-col items-center justify-center p-8 rounded-3xl border-2 border-transparent hover:border-primary-200 dark:hover:border-primary-800 transition-colors shadow-xl bg-white dark:bg-gray-800">
-                        <span className="text-xs uppercase tracking-widest text-primary-600 font-bold mb-4">Question</span>
-                        <h3 className="text-2xl md:text-3xl font-bold text-center text-gray-900 dark:text-white">
-                            {cards[currentIndex].front}
-                        </h3>
-                        <p className="mt-8 text-sm text-gray-400">Click to flip</p>
+                    <div
+                        className="absolute inset-0 flex flex-col items-center justify-center p-8 rounded-3xl border-2 border-transparent hover:border-primary-200 dark:hover:border-primary-800 transition-colors shadow-2xl bg-white dark:bg-gray-800"
+                        style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                    >
+                        <span className="text-sm font-bold text-primary-600 uppercase tracking-widest mb-6">Question</span>
+                        <div className="flex-1 w-full flex items-center justify-center overflow-y-auto custom-scrollbar">
+                            <h3 className="text-2xl md:text-3xl font-bold text-center text-gray-900 dark:text-white leading-snug">
+                                {cards[currentIndex].front}
+                            </h3>
+                        </div>
+                        <p className="mt-6 text-sm text-gray-400">Click to flip</p>
                     </div>
 
                     {/* Back */}
                     <div
-                        className="absolute inset-0 backface-hidden glass-card flex flex-col items-center justify-center p-8 rounded-3xl bg-primary-50 dark:bg-gray-900 border-2 border-primary-100 dark:border-primary-900 shadow-xl"
-                        style={{ transform: "rotateY(180deg)" }}
+                        className="absolute inset-0 flex flex-col items-center justify-center p-8 rounded-3xl bg-primary-50 dark:bg-gray-900 border-2 border-primary-100 dark:border-primary-900 shadow-2xl"
+                        style={{
+                            transform: "rotateY(180deg)",
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden'
+                        }}
                     >
-                        <span className="text-xs uppercase tracking-widest text-green-600 font-bold mb-4">Answer</span>
-                        <p className="text-xl md:text-2xl text-center text-gray-800 dark:text-gray-200 leading-relaxed">
-                            {cards[currentIndex].back}
-                        </p>
+                        <span className="text-sm font-bold text-green-600 uppercase tracking-widest mb-6">Answer</span>
+                        <div className="flex-1 w-full flex items-center justify-center overflow-y-auto custom-scrollbar">
+                            <p className="text-xl md:text-2xl text-center text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
+                                {cards[currentIndex].back}
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -9,7 +9,9 @@ import {
     LogOut,
     Menu,
     X,
-    Map
+    Map,
+    Globe,
+    Terminal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -23,6 +25,7 @@ export default function Layout() {
         { name: 'My Courses', href: '/my-courses', icon: BookOpen },
         { name: 'Communities', href: '/communities', icon: Users },
         { name: 'Roadmap', href: '/roadmap', icon: Map },
+        { name: 'Playground', href: '/playground', icon: Terminal },
         { name: 'Profile', href: '/profile', icon: User },
     ];
 
@@ -89,6 +92,24 @@ export default function Layout() {
                                         </Link>
                                     );
                                 })}
+
+                                {/* Social Portal Entry */}
+                                <div className="pt-4 mt-4 border-t border-gray-100 dark:border-gray-700/50">
+                                    <h3 className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                                        Social
+                                    </h3>
+                                    <Link
+                                        to="/connect"
+                                        onClick={() => setIsSidebarOpen(false)}
+                                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-all duration-200 hover:translate-x-1 group"
+                                    >
+                                        <Globe className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                        <span className="flex-1">Learnify Social</span>
+                                        <span className="text-[10px] bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-300 px-1.5 py-0.5 rounded border border-pink-200 dark:border-pink-800">
+                                            NEW
+                                        </span>
+                                    </Link>
+                                </div>
                             </nav>
                         </div>
 

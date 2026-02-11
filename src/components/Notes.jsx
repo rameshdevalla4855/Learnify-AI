@@ -66,7 +66,7 @@ export default function Notes({ videoId, videoTitle, videoDescription }) {
     }
 
     return (
-        <div className="max-w-4xl mx-auto h-[600px] flex flex-col">
+        <div className="max-w-4xl mx-auto min-h-[600px] h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <PenTool className="w-5 h-5 text-primary-600" />

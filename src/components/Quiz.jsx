@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { generateQuiz } from '../services/gemini';
 import { Loader2, CheckCircle, XCircle, Brain, RefreshCw } from 'lucide-react';
 
-export default function Quiz({ videoTitle, courseId, videoId }) {
+export default function Quiz({ videoTitle, videoDescription, courseId, videoId }) {
     const [quizData, setQuizData] = useState(null);
     const [activeQuestion, setActiveQuestion] = useState(0);
     const [selectedAnswers, setSelectedAnswers] = useState({});
@@ -23,7 +23,7 @@ export default function Quiz({ videoTitle, courseId, videoId }) {
         setLoading(true);
         setError(null);
         try {
-            const data = await generateQuiz(videoTitle);
+            const data = await generateQuiz(videoTitle, videoDescription);
             if (data && data.questions) {
                 setQuizData(data);
             } else {
@@ -104,14 +104,14 @@ export default function Quiz({ videoTitle, courseId, videoId }) {
                                     key={idx}
                                     onClick={() => handleAnswerSelect(activeQuestion, option)}
                                     className={`w-full text-left p-4 rounded-lg border-2 transition-all ${selectedAnswers[activeQuestion] === option
-                                            ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/20'
-                                            : 'border-gray-200 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-800'
+                                        ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/20'
+                                        : 'border-gray-200 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-800'
                                         }`}
                                 >
                                     <div className="flex items-center">
                                         <div className={`w-6 h-6 rounded-full border flex items-center justify-center mr-3 ${selectedAnswers[activeQuestion] === option
-                                                ? 'border-primary-600 bg-primary-600 text-white'
-                                                : 'border-gray-400'
+                                            ? 'border-primary-600 bg-primary-600 text-white'
+                                            : 'border-gray-400'
                                             }`}>
                                             {selectedAnswers[activeQuestion] === option && <div className="w-2 h-2 bg-white rounded-full" />}
                                         </div>
