@@ -1,61 +1,74 @@
+import { cacheProblems } from './problemCacheService';
+
 const BASE_URL = 'https://alfa-leetcode-api.onrender.com';
 
 export const leetcodeService = {
-    // Fetch list of problems
+    /**
+     * Raw fetch from API — returns array of problems or [].
+     */
     getProblems: async (limit = 20, skip = 0) => {
         try {
-            const response = await fetch(`${BASE_URL}/problems?limit=${limit}&skip=${skip}`);
-            if (!response.ok) throw new Error('Failed to fetch problems');
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
+
+            const response = await fetch(
+                `${BASE_URL}/problems?limit=${limit}&skip=${skip}`,
+                { signal: controller.signal }
+            );
+            clearTimeout(timeout);
+
+            if (!response.ok) throw new Error(`API ${response.status}`);
             const data = await response.json();
-            return data.problemsetQuestionList;
+            return data.problemsetQuestionList || [];
         } catch (error) {
-            console.error('Error fetching problems:', error);
+            console.error('Error fetching problems:', error.message);
             return [];
         }
     },
 
-    // Fetch problems by topic
-    getProblemsByTopic: async (topicSlug, limit = 20, skip = 0) => {
+    /**
+     * Fetch problems from API and cache them in Firestore.
+     * Returns { problems, fromApi: true/false }.
+     */
+    fetchAndCacheProblems: async (limit = 50, skip = 0) => {
         try {
-            // API endpoint might be different for topic filtering
-            // Commonly it is /topic/:topicSlug
-            // But let's check if we can filter via query params on /problems
-            // If not available, we might have to use a specific endpoint if known
-            // Based on similar APIs, trying /problems?tags=topicSlug
-            // OR /topicTag/:topicSlug
-            const response = await fetch(`${BASE_URL}/topicTag/${topicSlug}?limit=${limit}&skip=${skip}`);
-            // Fallback strategy if failing: just fetch standard list and client-side filter (limitations apply)
-            if (!response.ok) {
-                // Try alternative route or fallback
-                console.warn(`Failed to fetch by topic ${topicSlug}, falling back to general list`);
-                return [];
+            const problems = await leetcodeService.getProblems(limit, skip);
+            if (problems.length > 0) {
+                // Cache in background — don't block the return
+                cacheProblems(problems).catch(err =>
+                    console.warn('Cache write failed (non-blocking):', err.message)
+                );
+                return { problems, fromApi: true };
             }
-            const data = await response.json();
-            // Normalized return format
-            return data.data?.topicTag?.questions || data.questions || [];
+            return { problems: [], fromApi: false };
         } catch (error) {
-            console.error(`Error fetching problems for topic ${topicSlug}:`, error);
-            return [];
+            console.error('fetchAndCacheProblems failed:', error);
+            return { problems: [], fromApi: false };
         }
     },
 
-    // Fetch specific problem details
+    /**
+     * Fetch specific problem details by slug.
+     */
     getProblemDetails: async (titleSlug) => {
         try {
-            // Note: The API might have different endpoints for different data
-            // We'll try to fetch description and hopefully snippets if available
-            // standard select endpoint for this API seems to be /select
-            const response = await fetch(`${BASE_URL}/select?titleSlug=${titleSlug}`);
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000);
+
+            const response = await fetch(
+                `${BASE_URL}/select?titleSlug=${titleSlug}`,
+                { signal: controller.signal }
+            );
+            clearTimeout(timeout);
+
             if (!response.ok) throw new Error('Failed to fetch problem details');
-            const data = await response.json();
-            return data;
+            return await response.json();
         } catch (error) {
-            console.error('Error fetching problem details:', error);
+            console.error('Error fetching problem details:', error.message);
             return null;
         }
     },
 
-    // Helper to normalize difficulty color
     getDifficultyColor: (difficulty) => {
         switch (difficulty?.toLowerCase()) {
             case 'easy': return 'text-green-400 bg-green-400/10';
