@@ -45,5 +45,11 @@ service cloud.firestore {
         allow read, write: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
       }
     }
+
+    // LeetCode Problems Cache
+    match /leetcodeProblems/{problemId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
   }
 }
