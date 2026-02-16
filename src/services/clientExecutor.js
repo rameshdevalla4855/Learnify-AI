@@ -125,6 +125,22 @@ sys.stdout = _stdout_capture
 sys.stderr = _stderr_capture
 `);
 
+        // Patch input() to use browser prompt
+        pyodide.runPython(`
+import builtins
+from js import prompt as _js_prompt
+
+def _browser_input(msg=""):
+    result = _js_prompt(str(msg) if msg else "Enter input:")
+    if result is None:
+        result = ""
+    # Also print the prompt + response to stdout so it shows in output
+    print(f"{msg}{result}")
+    return result
+
+builtins.input = _browser_input
+`);
+
         // Run user code
         pyodide.runPython(code);
 

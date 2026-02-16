@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-    List, Trophy, User, LogOut, Menu, X, ArrowLeft, Code, Zap, Bell, Search, MessageSquare, Terminal
+    List, Trophy, User, LogOut, Menu, X, ArrowLeft, Code, Zap, Bell, Search, MessageSquare, Terminal, Flame
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

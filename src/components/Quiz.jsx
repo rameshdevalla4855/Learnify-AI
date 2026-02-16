@@ -1,27 +1,33 @@
 import { useState, useEffect } from 'react';
 import { generateQuiz } from '../services/gemini';
 import { Loader2, CheckCircle, XCircle, Brain, RefreshCw } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { doc, updateDoc, increment } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
 export default function Quiz({ videoTitle, videoDescription, courseId, videoId }) {
+    const { currentUser } = useAuth();
     const [quizData, setQuizData] = useState(null);
     const [activeQuestion, setActiveQuestion] = useState(0);
     const [selectedAnswers, setSelectedAnswers] = useState({});
     const [showResults, setShowResults] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [quizSubmitted, setQuizSubmitted] = useState(false);
 
-    // Reset quiz when video changes
     useEffect(() => {
         setQuizData(null);
         setSelectedAnswers({});
         setShowResults(false);
         setActiveQuestion(0);
         setError(null);
+        setQuizSubmitted(false);
     }, [videoId]);
 
     async function handleGenerateQuiz() {
         setLoading(true);
         setError(null);
+        setQuizSubmitted(false);
         try {
             const data = await generateQuiz(videoTitle, videoDescription);
             if (data && data.questions) {
@@ -51,6 +57,26 @@ export default function Quiz({ videoTitle, videoDescription, courseId, videoId }
             if (selectedAnswers[idx] === q.correctAnswer) correct++;
         });
         return correct;
+    }
+
+    async function handleSubmitQuiz() {
+        if (!currentUser || quizSubmitted) return;
+        
+        const score = calculateScore();
+        const xpEarned = score * 5;
+        
+        try {
+            const userRef = doc(db, "users", currentUser.uid);
+            await updateDoc(userRef, {
+                "learningStats.quizzesTaken": increment(1),
+                "learningStats.xp": increment(xpEarned)
+            });
+            setQuizSubmitted(true);
+        } catch (err) {
+            console.error("Error updating quiz stats:", err);
+        }
+        
+        setShowResults(true);
     }
 
     if (loading) {
@@ -132,7 +158,7 @@ export default function Quiz({ videoTitle, videoDescription, courseId, videoId }
                         </button>
                         {activeQuestion === quizData.questions.length - 1 ? (
                             <button
-                                onClick={() => setShowResults(true)}
+                                onClick={handleSubmitQuiz}
                                 disabled={Object.keys(selectedAnswers).length < quizData.questions.length}
                                 className="px-6 py-2 rounded-md bg-primary-600 text-white font-medium hover:bg-primary-500 disabled:opacity-50"
                             >
