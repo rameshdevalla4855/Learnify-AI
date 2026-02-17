@@ -66,50 +66,43 @@ export function AuthProvider({ children }) {
         return !usernameSnap.exists();
     }
 
-    async function loginWithGoogle() {
+async function loginWithGoogle() {
         const provider = new GoogleAuthProvider();
         try {
             console.log("Initiating Google Popup...");
             const result = await signInWithPopup(auth, provider);
             console.log("Google Sign In Success. User UID:", result.user.uid);
 
-            // Check if user exists in Firestore, if not create basic profile
             const userRef = doc(db, "users", result.user.uid);
             console.log("Checking Firestore for user doc...");
             const userSnap = await getDoc(userRef);
 
+            const userData = {
+                uid: result.user.uid,
+                email: result.user.email || null,
+                displayName: result.user.displayName || "User",
+                username: (result.user.email?.split('@')[0] || "user") + Math.floor(Math.random() * 10000),
+                photoURL: result.user.photoURL || null,
+                lastLogin: serverTimestamp(),
+                enrolledCourses: [],
+                progress: {},
+                learningStats: {
+                    videosWatched: 0,
+                    quizzesTaken: 0,
+                    xp: 0
+                }
+            };
+
             if (!userSnap.exists()) {
                 console.log("User doc does not exist. Creating new...");
-
-                // For Google Auth, we might need a flow to set username later if we want strict uniqueness everywhere
-                // For now, we'll generate a base one based on email/name, but we won't strictly reserve it in 'usernames' collection
-                // to avoid collision handling complexity in this auto-flow.
-                // Alternatively, we could prompt for username after login. 
-                // For this implementation, we'll just skip 'usernames' reservation for Google Auth for simplicity, 
-                // or use a timestamp to ensure uniqueness if critical.
-
-                const userData = {
-                    uid: result.user.uid,
-                    email: result.user.email || null,
-                    displayName: result.user.displayName || "User",
-                    username: (result.user.email?.split('@')[0] || "user") + Math.floor(Math.random() * 10000), // Fallback unique-ish handle
-                    photoURL: result.user.photoURL || null,
+                await setDoc(userRef, {
+                    ...userData,
                     createdAt: serverTimestamp(),
-                    enrolledCourses: [],
-                    progress: {},
-                    learningStats: {
-                        videosWatched: 0,
-                        quizzesTaken: 0,
-                        xp: 0
-                    }
-                };
-
-                try {
-                    await setDoc(userRef, userData);
-                    console.log("User document created successfully in Firestore.");
-                } catch (dbError) {
-                    console.error("FATAL: Failed to write user data to Firestore!", dbError);
-                }
+                });
+                console.log("User document created successfully in Firestore.");
+            } else {
+                console.log("User doc exists. Updating last login...");
+                await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
             }
             return result.user;
         } catch (error) {

@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { db } from '../../services/firebase';
 import { collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, onSnapshot } from 'firebase/firestore';
 import { uploadToCloudinary } from '../../services/cloudinary';
-import { Plus, X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Stories() {
@@ -11,14 +11,13 @@ export default function Stories() {
     const [stories, setStories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedStoryIndex, setSelectedStoryIndex] = useState(null);
+    const [currentItemIndex, setCurrentItemIndex] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
+    const [progress, setProgress] = useState(0);
 
-    // Fetch recent stories (last 24h)
     useEffect(() => {
         if (!currentUser) return;
 
-        // In a real app, we'd filter by timestamp > 24h ago. 
-        // For simplicity/demo, we connect to a 'stories' collection and just get recent ones.
         const q = query(collection(db, 'stories'), orderBy('timestamp', 'desc'));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -26,7 +25,7 @@ export default function Stories() {
             snapshot.forEach(doc => {
                 fetchedStories.push({ id: doc.id, ...doc.data() });
             });
-            // Group by user
+            
             const grouped = fetchedStories.reduce((acc, story) => {
                 if (!acc[story.userId]) {
                     acc[story.userId] = {
@@ -64,66 +63,118 @@ export default function Stories() {
             });
         } catch (error) {
             console.error("Failed to upload story:", error);
-            alert("Failed to upload story.");
         } finally {
             setIsUploading(false);
         }
     };
 
     const handleNextStory = () => {
-        if (selectedStoryIndex !== null && selectedStoryIndex < stories.length - 1) {
+        if (selectedStoryIndex === null) return;
+        
+        const currentStory = stories[selectedStoryIndex];
+        if (currentItemIndex < currentStory.items.length - 1) {
+            setCurrentItemIndex(currentItemIndex + 1);
+            setProgress(0);
+        } else if (selectedStoryIndex < stories.length - 1) {
             setSelectedStoryIndex(selectedStoryIndex + 1);
+            setCurrentItemIndex(0);
+            setProgress(0);
         } else {
-            setSelectedStoryIndex(null); // Close if at end
+            setSelectedStoryIndex(null);
         }
     };
 
     const handlePrevStory = () => {
-        if (selectedStoryIndex !== null && selectedStoryIndex > 0) {
+        if (selectedStoryIndex === null) return;
+        
+        if (currentItemIndex > 0) {
+            setCurrentItemIndex(currentItemIndex - 1);
+            setProgress(0);
+        } else if (selectedStoryIndex > 0) {
             setSelectedStoryIndex(selectedStoryIndex - 1);
+            setCurrentItemIndex(0);
+            setProgress(0);
         }
     };
+
+    // Auto-progress story
+    useEffect(() => {
+        if (selectedStoryIndex === null) return;
+
+        const timer = setInterval(() => {
+            setProgress(prev => {
+                if (prev >= 100) {
+                    handleNextStory();
+                    return 0;
+                }
+                return prev + 2;
+            });
+        }, 100);
+
+        return () => clearInterval(timer);
+    }, [selectedStoryIndex, currentItemIndex]);
 
     return (
         <>
             <div className="flex gap-4 overflow-x-auto pb-4 pt-2 no-scrollbar">
                 {/* Add Story Button */}
-                <div className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer relative group">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center gap-2 min-w-[72px] cursor-pointer group"
+                >
                     <div className="relative">
-                        <div className="w-16 h-16 rounded-full p-[2px] border-2 border-gray-200 dark:border-gray-700 group-hover:border-primary-500 transition-colors">
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-white/10 group-hover:ring-pink-500/50 transition-all">
                             <img
                                 src={currentUser?.photoURL || `https://ui-avatars.com/api/?name=${currentUser?.email || 'User'}`}
                                 alt="You"
-                                className="w-full h-full rounded-full object-cover"
+                                className="w-full h-full object-cover"
                             />
+                            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
                         </div>
-                        <label className="absolute bottom-0 right-0 bg-primary-500 text-white rounded-full p-1 cursor-pointer hover:bg-primary-600 transition-colors border-2 border-white dark:border-black">
-                            {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                        <label className="absolute bottom-0 right-0 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full p-1.5 cursor-pointer hover:scale-110 transition-transform shadow-lg shadow-pink-500/30">
+                            {isUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                             <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
                         </label>
                     </div>
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Your Story</span>
-                </div>
+                    <span className="text-xs font-medium text-gray-400 group-hover:text-white transition-colors">Your Story</span>
+                </motion.div>
 
                 {/* Other Stories */}
-                {stories.map((userStory, index) => (
-                    <div
-                        key={userStory.userId}
-                        className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer"
-                        onClick={() => setSelectedStoryIndex(index)}
-                    >
-                        <div className="w-16 h-16 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-fuchsia-600">
-                            <img
-                                src={userStory.userAvatar}
-                                alt={userStory.username}
-                                className="w-full h-full rounded-full object-cover border-2 border-white dark:border-black"
-                            />
+                {loading ? (
+                    [...Array(4)].map((_, i) => (
+                        <div key={i} className="flex flex-col items-center gap-2 min-w-[72px]">
+                            <div className="w-16 h-16 rounded-2xl bg-white/5 animate-pulse" />
+                            <div className="w-12 h-3 bg-white/5 rounded animate-pulse" />
                         </div>
-                        <span className="text-xs text-gray-700 dark:text-gray-300 truncate w-16 text-center">
-                            {userStory.username}
-                        </span>
-                    </div>
-                ))}
+                    ))
+                ) : (
+                    stories.map((userStory, index) => (
+                        <motion.div
+                            key={userStory.userId}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: index * 0.05 }}
+                            className="flex flex-col items-center gap-2 min-w-[72px] cursor-pointer group"
+                            onClick={() => {
+                                setSelectedStoryIndex(index);
+                                setCurrentItemIndex(0);
+                                setProgress(0);
+                            }}
+                        >
+                            <div className="w-16 h-16 rounded-2xl p-[2px] bg-gradient-to-tr from-pink-500 via-purple-500 to-blue-500 group-hover:scale-105 transition-transform">
+                                <img
+                                    src={userStory.userAvatar}
+                                    alt={userStory.username}
+                                    className="w-full h-full rounded-[14px] object-cover"
+                                />
+                            </div>
+                            <span className="text-xs text-gray-400 group-hover:text-white transition-colors truncate w-16 text-center">
+                                {userStory.username?.split(' ')[0]}
+                            </span>
+                        </motion.div>
+                    ))
+                )}
             </div>
 
             {/* Story Viewer Modal */}
@@ -133,39 +184,71 @@ export default function Stories() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center"
+                        className="fixed inset-0 z-50 bg-black flex items-center justify-center"
                         onClick={() => setSelectedStoryIndex(null)}
                     >
-                        <button className="absolute top-4 right-4 text-white p-2 z-50" onClick={() => setSelectedStoryIndex(null)}>
+                        {/* Close Button */}
+                        <button 
+                            className="absolute top-6 right-6 text-white p-2 hover:bg-white/10 rounded-full transition-colors z-50" 
+                            onClick={() => setSelectedStoryIndex(null)}
+                        >
                             <X className="w-8 h-8" />
                         </button>
 
+                        {/* Story Container */}
                         <div
-                            className="relative w-full max-w-md aspect-[9/16] bg-black rounded-xl overflow-hidden"
+                            className="relative w-full max-w-[400px] h-full max-h-[700px] mx-4"
                             onClick={e => e.stopPropagation()}
                         >
-                            {/* Navigation Overlays */}
-                            <div className="absolute inset-y-0 left-0 w-1/4 z-10" onClick={handlePrevStory} />
-                            <div className="absolute inset-y-0 right-0 w-1/4 z-10" onClick={handleNextStory} />
-
-                            {/* User Info Overlay */}
-                            <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/60 to-transparent z-20 flex items-center gap-3">
-                                <img
-                                    src={stories[selectedStoryIndex].userAvatar}
-                                    className="w-8 h-8 rounded-full border border-white/50"
-                                    alt=""
-                                />
-                                <span className="text-white font-semibold text-sm">
-                                    {stories[selectedStoryIndex].username}
-                                </span>
+                            {/* Progress Bars */}
+                            <div className="absolute top-4 left-4 right-4 flex gap-1 z-20">
+                                {stories[selectedStoryIndex].items.map((_, idx) => (
+                                    <div key={idx} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full bg-white rounded-full transition-all duration-100"
+                                            style={{ 
+                                                width: idx < currentItemIndex ? '100%' : 
+                                                       idx === currentItemIndex ? `${progress}%` : '0%' 
+                                            }}
+                                        />
+                                    </div>
+                                ))}
                             </div>
 
-                            {/* Image Content - Show latest for now (improvement: carousel of items) */}
+                            {/* Navigation Areas */}
+                            <div 
+                                className="absolute inset-y-0 left-0 w-1/3 z-10" 
+                                onClick={handlePrevStory}
+                            />
+                            <div 
+                                className="absolute inset-y-0 right-0 w-1/3 z-10" 
+                                onClick={handleNextStory}
+                            />
+
+                            {/* User Info */}
+                            <div className="absolute top-10 left-4 right-4 z-20 flex items-center gap-3">
+                                <img
+                                    src={stories[selectedStoryIndex].userAvatar}
+                                    className="w-9 h-9 rounded-full ring-2 ring-white/30"
+                                    alt=""
+                                />
+                                <div className="flex-1">
+                                    <span className="text-white font-semibold text-sm">
+                                        {stories[selectedStoryIndex].username}
+                                    </span>
+                                </div>
+                                <Sparkles className="w-5 h-5 text-white/50" />
+                            </div>
+
+                            {/* Story Image */}
                             <img
-                                src={stories[selectedStoryIndex].items[0].imageUrl}
-                                className="w-full h-full object-cover"
+                                src={stories[selectedStoryIndex].items[currentItemIndex]?.imageUrl}
+                                className="w-full h-full object-cover rounded-2xl"
                                 alt="Story"
                             />
+
+                            {/* Gradient Overlays */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/30 rounded-2xl pointer-events-none" />
                         </div>
                     </motion.div>
                 )}

@@ -1,48 +1,102 @@
-import { useState } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
+import { useAppTheme } from '../context/AppThemeContext';
+import { db } from '../services/firebase';
+import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
+
+const CreatePostModal = lazy(() => import('./connect/CreatePostModal'));
 import {
     Home,
-    Search,
+    Bell,
     MessageSquare,
     LogOut,
     Menu,
     X,
     ArrowLeft,
-    Heart
+    Sparkles,
+    Compass,
+    User,
+    Plus,
+    Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ConnectLayout() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const { currentUser, logout } = useAuth();
-    const { socialTheme, setSocialTheme } = useTheme();
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [notificationCount, setNotificationCount] = useState(0);
+    const { currentUser, logout, userProfile } = useAuth();
+    const { theme, setTheme } = useAppTheme();
     const location = useLocation();
+
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const pendingCount = userProfile?.pendingConnections?.length || 0;
+
+        const q = query(
+            collection(db, 'notifications'),
+            where('recipientId', '==', currentUser.uid),
+            where('read', '==', false)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setNotificationCount(snapshot.size + pendingCount);
+        });
+
+        return () => unsubscribe();
+    }, [currentUser, userProfile]);
 
     const navigation = [
         { name: 'Home', href: '/connect', icon: Home },
-        { name: 'Search', href: '/connect/network', icon: Search },
-        { name: 'Notifications', href: '/connect/notifications', icon: Heart },
+        { name: 'Explore', href: '/connect/explore', icon: Compass },
+        { name: 'Network', href: '/connect/network', icon: Search },
+        { name: 'Notifications', href: '/connect/notifications', icon: Bell, badge: notificationCount },
         { name: 'Messages', href: '/connect/chat', icon: MessageSquare },
+        { name: 'Profile', href: '/connect/profile', icon: User },
     ];
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-    const suggestUsers = [
-        { id: 1, name: "Sarah Chen", role: "Frontend Dev", avatar: "https://ui-avatars.com/api/?name=Sarah+Chen&background=random" },
-        { id: 2, name: "Alex Kumar", role: "AI Researcher", avatar: "https://ui-avatars.com/api/?name=Alex+Kumar&background=random" },
-        { id: 3, name: "Jordan Lee", role: "Full Stack", avatar: "https://ui-avatars.com/api/?name=Jordan+Lee&background=random" },
-    ];
+    const isActive = (href) => {
+        if (href === '/connect') return location.pathname === '/connect';
+        return location.pathname.startsWith(href);
+    };
 
     return (
-        <div className="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white flex flex-col md:flex-row">
+        <div className="min-h-screen bg-[#0a0a0f] text-white flex">
+            {/* Animated Background */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-pink-500/10 rounded-full blur-[150px]" />
+                <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-purple-500/10 rounded-full blur-[120px]" />
+            </div>
+
             {/* Mobile Header */}
-            <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
-                <span className="text-xl font-bold font-instagram">Learnify Social</span>
-                <button onClick={toggleSidebar} className="p-2">
-                    {isSidebarOpen ? <X /> : <Menu />}
-                </button>
+            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5">
+                <div className="flex items-center justify-between px-4 h-16">
+                    <Link to="/connect" className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-500 rounded-lg flex items-center justify-center">
+                            <Sparkles className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="text-lg font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+                            Social
+                        </span>
+                    </Link>
+                    <div className="flex items-center gap-2">
+                        <Link to="/connect/notifications" className="p-2 relative">
+                            <Bell className="w-5 h-5 text-gray-400" />
+                            {notificationCount > 0 && (
+                                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-pink-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                    {notificationCount > 9 ? '9+' : notificationCount}
+                                </span>
+                            )}
+                        </Link>
+                        <button onClick={toggleSidebar} className="p-2">
+                            {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Mobile Sidebar Backdrop */}
@@ -53,138 +107,132 @@ export default function ConnectLayout() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={() => setIsSidebarOpen(false)}
-                        className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+                        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
                     />
                 )}
             </AnimatePresence>
 
-            {/* Sidebar (Desktop) / Drawer (Mobile) */}
+            {/* Sidebar */}
             <aside className={`
-                fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-black border-r border-gray-200 dark:border-gray-800 flex flex-col transform transition-transform duration-300 ease-in-out
-                md:translate-x-0 md:static
+                fixed inset-y-0 left-0 z-50 w-72 bg-[#0a0a0f]/95 backdrop-blur-xl border-r border-white/5 flex flex-col transform transition-transform duration-300 ease-out
+                lg:translate-x-0 lg:static
                 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             `}>
-                <div className="p-6 md:p-8">
-                    <h1 className="text-2xl font-extrabold mb-8 hidden md:block font-instagram">Learnify Social</h1>
-
-                    <nav className="space-y-2">
-                        {navigation.map((item) => {
-                            const isActive = location.pathname === item.href || (item.href !== '/connect' && location.pathname.startsWith(item.href) && item.href !== '/connect/notifications');
-                            return (
-                                <Link
-                                    key={item.name}
-                                    to={item.href}
-                                    onClick={() => setIsSidebarOpen(false)}
-                                    className={`
-                                        flex items-center gap-4 px-4 py-3 rounded-lg text-md font-medium transition-all group
-                                        ${isActive ? 'font-bold' : 'hover:bg-gray-50 dark:hover:bg-gray-900'}
-                                    `}
-                                >
-                                    <item.icon className={`w-6 h-6 ${isActive ? 'fill-current scale-110' : 'group-hover:scale-110'} transition-transform`} />
-                                    <span>{item.name}</span>
-                                </Link>
-                            );
-                        })}
-                    </nav>
-                </div>
-
-                <div className="mt-auto p-6 border-t border-gray-200 dark:border-gray-800 space-y-4">
-                    {/* Theme Switcher */}
-                    <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
-                        <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">Theme</p>
-                        <div className="grid grid-cols-3 gap-2">
-                            <button
-                                onClick={() => setSocialTheme('light')}
-                                className={`h-8 rounded-lg border flex items-center justify-center transition-all ${socialTheme === 'light' ? 'bg-white border-primary-500 shadow-sm' : 'bg-white border-gray-200 opacity-50 hover:opacity-100'}`}
-                                title="Modern Light"
-                            >
-                                <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-gray-100 to-white border border-gray-200"></div>
-                            </button>
-                            <button
-                                onClick={() => setSocialTheme('midnight')}
-                                className={`h-8 rounded-lg border flex items-center justify-center transition-all ${socialTheme === 'midnight' ? 'bg-slate-950 border-purple-500 shadow-sm' : 'bg-slate-950 border-slate-800 opacity-50 hover:opacity-100'}`}
-                                title="Midnight Premium"
-                            >
-                                <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-slate-900 to-purple-900 border border-slate-700"></div>
-                            </button>
-                            <button
-                                onClick={() => setSocialTheme('gold')}
-                                className={`h-8 rounded-lg border flex items-center justify-center transition-all ${socialTheme === 'gold' ? 'bg-neutral-950 border-yellow-500 shadow-sm' : 'bg-neutral-950 border-neutral-800 opacity-50 hover:opacity-100'}`}
-                                title="Royal Gold"
-                            >
-                                <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-neutral-900 to-yellow-600 border border-yellow-900"></div>
-                            </button>
+                <div className="p-6 flex-1 overflow-y-auto">
+                    {/* Logo */}
+                    <Link to="/connect" className="flex items-center gap-3 mb-10">
+                        <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg shadow-pink-500/20">
+                            <Sparkles className="w-5 h-5 text-white" />
                         </div>
-                    </div>
-                    <Link
-                        to="/"
-                        className="flex items-center gap-4 px-4 py-3 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg w-full transition-colors group"
-                    >
-                        <ArrowLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
-                        <span>Back to Learnify</span>
+                        <div>
+                            <span className="text-xl font-bold bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+                                Learnify Social
+                            </span>
+                            <span className="block text-[10px] text-gray-500 font-medium">Connect & Learn</span>
+                        </div>
                     </Link>
 
+                    {/* Navigation */}
+                    <nav className="space-y-1">
+                        {navigation.map((item) => (
+                            <Link
+                                key={item.name}
+                                to={item.href}
+                                onClick={() => setIsSidebarOpen(false)}
+                                className={`flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium transition-all group relative ${isActive(item.href)
+                                    ? 'bg-gradient-to-r from-pink-500/10 to-purple-500/10 text-white'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                            >
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isActive(item.href)
+                                    ? 'bg-gradient-to-br from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/20'
+                                    : 'bg-white/5 text-gray-400 group-hover:bg-white/10 group-hover:text-white'
+                                    }`}>
+                                    <item.icon className="w-4 h-4" />
+                                </div>
+                                <span className="flex-1">{item.name}</span>
+                                {item.badge && (
+                                    <span className="w-5 h-5 bg-pink-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                        {item.badge}
+                                    </span>
+                                )}
+                            </Link>
+                        ))}
+                    </nav>
+
+                    {/* Create Post Button */}
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="w-full mt-6 flex items-center justify-center gap-2 h-11 bg-gradient-to-r from-pink-500 to-purple-500 rounded-xl text-white font-semibold shadow-lg shadow-pink-500/20 hover:shadow-pink-500/40 transition-all"
+                    >
+                        <Plus className="w-5 h-5" />
+                        Create Post
+                    </button>
+                </div>
+
+                {/* Bottom Section */}
+                <div className="p-4 border-t border-white/5 space-y-4">
+                    {/* Theme Toggle */}
+                    <div className="flex items-center justify-between px-4 py-2 bg-white/5 rounded-xl">
+                        <span className="text-sm text-gray-400">Dark Mode</span>
+                        <button
+                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                            className="w-10 h-6 bg-white/10 rounded-full relative transition-colors"
+                        >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${theme === 'dark' ? 'translate-x-5 bg-pink-500' : 'translate-x-1 bg-gray-400'
+                                }`} />
+                        </button>
+                    </div>
+
+                    {/* Back to Learnify */}
+                    <Link
+                        to="/"
+                        className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all group"
+                    >
+                        <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                        <span className="text-sm font-medium">Back to Learnify</span>
+                    </Link>
+
+                    {/* User Profile */}
                     {currentUser && (
-                        <div className="flex items-center gap-3 px-4 py-2 mb-2">
+                        <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl">
                             <img
                                 src={currentUser.photoURL || `https://ui-avatars.com/api/?name=${currentUser.email}`}
                                 alt="User"
-                                className="h-8 w-8 rounded-full"
+                                className="w-10 h-10 rounded-full object-cover ring-2 ring-pink-500/30"
                             />
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold truncate">
-                                    {currentUser.displayName || currentUser.email}
+                                <p className="text-sm font-semibold text-white truncate">
+                                    {currentUser.displayName || currentUser.email?.split('@')[0]}
                                 </p>
+                                <p className="text-xs text-gray-500">@{userProfile?.username || 'learner'}</p>
                             </div>
+                            <button
+                                onClick={logout}
+                                className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                            >
+                                <LogOut className="w-4 h-4" />
+                            </button>
                         </div>
                     )}
-                    <button
-                        onClick={() => logout()}
-                        className="flex items-center gap-4 px-4 py-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg w-full transition-colors"
-                    >
-                        <LogOut className="w-6 h-6" />
-                        <span>Log Out</span>
-                    </button>
                 </div>
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 overflow-auto w-full md:max-w-2xl mx-auto py-8 px-4">
+            <main className="flex-1 overflow-auto w-full lg:max-w-2xl mx-auto pt-20 lg:pt-8 px-4 pb-8 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 <Outlet />
             </main>
 
-            {/* Right Sidebar (Suggestions) - Desktop Only */}
-            <aside className="hidden xl:block w-80 p-8 border-l border-gray-200 dark:border-gray-800">
-                <div className="fixed w-80 pr-8">
-                    <div className="flex items-center justify-between mb-6">
-                        <span className="text-sm font-bold text-gray-500">Suggested for you</span>
-                        <Link to="/connect/network" className="text-xs font-semibold text-primary-600 hover:text-primary-700">See All</Link>
-                    </div>
 
-                    <div className="space-y-4">
-                        {suggestUsers.map(user => (
-                            <div key={user.id} className="flex items-center justify-between">
-                                <Link to={`/connect/profile/${user.id}`} className="flex items-center gap-3 group">
-                                    <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full" />
-                                    <div>
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
-                                            {user.name}
-                                        </p>
-                                        <p className="text-xs text-gray-500">{user.role}</p>
-                                    </div>
-                                </Link>
-                                <button className="text-xs font-semibold text-blue-500 hover:text-blue-700">
-                                    Follow
-                                </button>
-                            </div>
-                        ))}
-                    </div>
 
-                    <footer className="mt-8 text-xs text-gray-400">
-                        © 2024 Learnify AI Social
-                    </footer>
-                </div>
-            </aside>
+            {/* Create Post Modal */}
+            <AnimatePresence>
+                {isCreateModalOpen && (
+                    <Suspense fallback={null}>
+                        <CreatePostModal onClose={() => setIsCreateModalOpen(false)} />
+                    </Suspense>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

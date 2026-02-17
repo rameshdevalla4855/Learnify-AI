@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
 import { 
     Plus, Search, Grid, List, Clock, BookOpen, PlayCircle, 
     MoreVertical, Trash2, Edit, Share2, ChevronRight, Sparkles,
-    TrendingUp, Award, Zap, FolderOpen, RefreshCw
+    TrendingUp, Award, Zap, FolderOpen, RefreshCw, X
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function MyCourses() {
     const [courses, setCourses] = useState([]);
@@ -17,7 +17,20 @@ export default function MyCourses() {
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('recent');
     const [error, setError] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+    const [activeMenu, setActiveMenu] = useState(null);
     const { currentUser } = useAuth();
+
+    const handleDeleteCourse = async (courseId) => {
+        try {
+            await deleteDoc(doc(db, 'courses', courseId));
+            setShowDeleteConfirm(null);
+            setActiveMenu(null);
+        } catch (error) {
+            console.error('Error deleting course:', error);
+            setError('Failed to delete course. Please try again.');
+        }
+    };
 
     useEffect(() => {
         if (!currentUser) {
@@ -253,7 +266,12 @@ export default function MyCourses() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.05 }}
                         >
-                            <CourseCard course={course} />
+                            <CourseCard 
+                                course={course} 
+                                onDelete={(id) => setShowDeleteConfirm(id)}
+                                activeMenu={activeMenu}
+                                setActiveMenu={setActiveMenu}
+                            />
                         </motion.div>
                     ))}
                 </div>
@@ -266,100 +284,204 @@ export default function MyCourses() {
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: idx * 0.05 }}
                         >
-                            <CourseListItem course={course} />
+                            <CourseListItem 
+                                course={course} 
+                                onDelete={(id) => setShowDeleteConfirm(id)}
+                                activeMenu={activeMenu}
+                                setActiveMenu={setActiveMenu}
+                            />
                         </motion.div>
                     ))}
                 </div>
             )}
+
+            {/* Delete Confirmation Modal */}
+            <AnimatePresence>
+                {showDeleteConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+                        onClick={() => setShowDeleteConfirm(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white dark:bg-gray-800 w-full max-w-sm rounded-2xl border border-gray-200 dark:border-gray-700 p-6"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="text-center">
+                                <div className="w-14 h-14 bg-red-100 dark:bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Trash2 className="w-7 h-7 text-red-500" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Delete Course?</h3>
+                                <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">This will remove the course from your library. This action cannot be undone.</p>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowDeleteConfirm(null)}
+                                        className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-700 rounded-xl text-gray-900 dark:text-white font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteCourse(showDeleteConfirm)}
+                                        className="flex-1 py-2.5 bg-red-500 rounded-xl text-white font-medium hover:bg-red-600 transition-colors"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
 
-function CourseCard({ course }) {
+function CourseCard({ course, onDelete, activeMenu, setActiveMenu }) {
     return (
-        <Link to={`/course/${course.id}`} className="group block">
-            <div className="bg-white dark:bg-gray-800/50 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700/50 hover:border-orange-200 dark:hover:border-orange-500/30 hover:shadow-xl hover:shadow-orange-500/5 transition-all">
-                <div className="aspect-video bg-gray-100 dark:bg-gray-900 relative overflow-hidden">
-                    {course.thumbnail && (
-                        <img
-                            src={course.thumbnail}
-                            alt={course.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                        />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                        <span className="px-2 py-1 bg-white/90 dark:bg-gray-900/90 rounded-lg text-[10px] font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                            <PlayCircle className="w-3 h-3" />
-                            {course.itemCount || 0} videos
-                        </span>
+        <div className="group relative">
+            <Link to={`/course/${course.id}`} className="block">
+                <div className="bg-white dark:bg-gray-800/50 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700/50 hover:border-orange-200 dark:hover:border-orange-500/30 hover:shadow-xl hover:shadow-orange-500/5 transition-all">
+                    <div className="aspect-video bg-gray-100 dark:bg-gray-900 relative overflow-hidden">
+                        {course.thumbnail && (
+                            <img
+                                src={course.thumbnail}
+                                alt={course.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                loading="lazy"
+                            />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                            <span className="px-2 py-1 bg-white/90 dark:bg-gray-900/90 rounded-lg text-[10px] font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                <PlayCircle className="w-3 h-3" />
+                                {course.itemCount || 0} videos
+                            </span>
+                        </div>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center transform scale-75 group-hover:scale-100 transition-transform">
+                                <PlayCircle className="w-7 h-7 text-orange-500" />
+                            </div>
+                        </div>
                     </div>
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center transform scale-75 group-hover:scale-100 transition-transform">
-                            <PlayCircle className="w-7 h-7 text-orange-500" />
+                    <div className="p-4">
+                        <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-1 group-hover:text-orange-500 transition-colors text-sm">
+                            {course.title}
+                        </h3>
+                        <p className="text-xs text-gray-500 mb-3">{course.channelTitle}</p>
+                        <div className="flex items-center justify-between text-xs text-gray-400">
+                            <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {course.createdAt?.seconds 
+                                    ? new Date(course.createdAt.seconds * 1000).toLocaleDateString() 
+                                    : 'Recently added'}
+                            </span>
+                            <span className="text-orange-500 font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
+                                Continue <ChevronRight className="w-3 h-3" />
+                            </span>
                         </div>
                     </div>
                 </div>
-                <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-1 group-hover:text-orange-500 transition-colors text-sm">
-                        {course.title}
-                    </h3>
-                    <p className="text-xs text-gray-500 mb-3">{course.channelTitle}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-400">
-                        <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {course.createdAt?.seconds 
-                                ? new Date(course.createdAt.seconds * 1000).toLocaleDateString() 
-                                : 'Recently added'}
-                        </span>
-                        <span className="text-orange-500 font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
-                            Continue <ChevronRight className="w-3 h-3" />
-                        </span>
-                    </div>
-                </div>
+            </Link>
+            {/* Menu Button */}
+            <div className="absolute top-3 right-3 z-10">
+                <button
+                    onClick={(e) => { e.preventDefault(); setActiveMenu(activeMenu === course.id ? null : course.id); }}
+                    className="p-2 bg-black/50 backdrop-blur-sm rounded-lg text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+                >
+                    <MoreVertical className="w-4 h-4" />
+                </button>
+                <AnimatePresence>
+                    {activeMenu === course.id && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden min-w-[130px]"
+                        >
+                            <button
+                                onClick={(e) => { e.preventDefault(); onDelete(course.id); }}
+                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                            >
+                                <Trash2 className="w-4 h-4" /> Delete
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
-        </Link>
+        </div>
     );
 }
 
-function CourseListItem({ course }) {
+function CourseListItem({ course, onDelete, activeMenu, setActiveMenu }) {
     return (
-        <Link to={`/course/${course.id}`} className="group block">
-            <div className="bg-white dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700/50 hover:border-orange-200 dark:hover:border-orange-500/30 hover:shadow-lg transition-all flex gap-4">
-                <div className="w-32 h-20 rounded-lg bg-gray-100 dark:bg-gray-900 overflow-hidden shrink-0 relative">
-                    {course.thumbnail && (
-                        <img
-                            src={course.thumbnail}
-                            alt={course.title}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                        />
+        <div className="group relative">
+            <Link to={`/course/${course.id}`} className="block">
+                <div className="bg-white dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700/50 hover:border-orange-200 dark:hover:border-orange-500/30 hover:shadow-lg transition-all flex gap-4">
+                    <div className="w-32 h-20 rounded-lg bg-gray-100 dark:bg-gray-900 overflow-hidden shrink-0 relative">
+                        {course.thumbnail && (
+                            <img
+                                src={course.thumbnail}
+                                alt={course.title}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                            />
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <PlayCircle className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1 group-hover:text-orange-500 transition-colors">
+                            {course.title}
+                        </h3>
+                        <p className="text-xs text-gray-500 mb-2">{course.channelTitle}</p>
+                        <div className="flex items-center gap-4 text-xs text-gray-400">
+                            <span className="flex items-center gap-1">
+                                <PlayCircle className="w-3 h-3" />
+                                {course.itemCount || 0} videos
+                            </span>
+                            <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {course.createdAt?.seconds 
+                                    ? new Date(course.createdAt.seconds * 1000).toLocaleDateString() 
+                                    : 'Recently'}
+                            </span>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all self-center" />
+                </div>
+            </Link>
+            {/* Menu Button */}
+            <div className="absolute top-4 right-4">
+                <button
+                    onClick={(e) => { e.preventDefault(); setActiveMenu(activeMenu === course.id ? null : course.id); }}
+                    className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                    <MoreVertical className="w-4 h-4" />
+                </button>
+                <AnimatePresence>
+                    {activeMenu === course.id && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden min-w-[130px] z-10"
+                        >
+                            <button
+                                onClick={(e) => { e.preventDefault(); onDelete(course.id); }}
+                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                            >
+                                <Trash2 className="w-4 h-4" /> Delete
+                            </button>
+                        </motion.div>
                     )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                        <PlayCircle className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1 group-hover:text-orange-500 transition-colors">
-                        {course.title}
-                    </h3>
-                    <p className="text-xs text-gray-500 mb-2">{course.channelTitle}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-400">
-                        <span className="flex items-center gap-1">
-                            <PlayCircle className="w-3 h-3" />
-                            {course.itemCount || 0} videos
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {course.createdAt?.seconds 
-                                ? new Date(course.createdAt.seconds * 1000).toLocaleDateString() 
-                                : 'Recently'}
-                        </span>
-                    </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all self-center" />
+                </AnimatePresence>
             </div>
-        </Link>
+        </div>
     );
 }

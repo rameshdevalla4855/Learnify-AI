@@ -1,14 +1,14 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../services/firebase';
-import { collection, addDoc, serverTimestamp, updateDoc, doc, increment } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { uploadToCloudinary } from '../../services/cloudinary';
-import { X, Image, Code, Video, XCircle, Loader2, Tag, Hash } from 'lucide-react';
+import { X, Image, Code, Video, XCircle, Loader2, Hash, Sparkles, Globe, Users, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function CreatePostModal({ onClose }) {
     const { currentUser } = useAuth();
-    const [activeTab, setActiveTab] = useState('media'); // 'media' or 'code'
+    const [activeTab, setActiveTab] = useState('media');
     const [caption, setCaption] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
@@ -16,6 +16,7 @@ export default function CreatePostModal({ onClose }) {
     const [codeLanguage, setCodeLanguage] = useState('javascript');
     const [tags, setTags] = useState('');
     const [isPosting, setIsPosting] = useState(false);
+    const [visibility, setVisibility] = useState('public');
 
     const fileInputRef = useRef(null);
 
@@ -70,10 +71,11 @@ export default function CreatePostModal({ onClose }) {
                 commentsCount: 0,
                 tags: tags.split(',').map(t => t.trim()).filter(t => t),
                 type: activeTab === 'code' ? 'code' : (mediaType || 'text'),
+                visibility,
             };
 
             if (mediaUrl) {
-                postData.imageUrl = mediaUrl; // Keeping legacy field for backward compat, or use mediaUrl
+                postData.imageUrl = mediaUrl;
                 postData.mediaUrl = mediaUrl;
                 postData.mediaType = mediaType;
             }
@@ -84,14 +86,9 @@ export default function CreatePostModal({ onClose }) {
             }
 
             await addDoc(collection(db, 'posts'), postData);
-
-            // Optional: Update user stats (posts count)
-            // await updateDoc(doc(db, 'users', currentUser.uid), { postsCount: increment(1) });
-
             onClose();
         } catch (error) {
             console.error("Error creating post:", error);
-            alert("Failed to create post. Please try again.");
         } finally {
             setIsPosting(false);
         }
@@ -102,63 +99,94 @@ export default function CreatePostModal({ onClose }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
             onClick={onClose}
         >
             <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-white dark:bg-gray-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                className="bg-[#12121a] w-full max-w-2xl rounded-3xl border border-white/10 overflow-hidden flex flex-col max-h-[90vh] shadow-2xl"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Create Post</h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-900 dark:hover:text-white">
-                        <X className="w-6 h-6" />
+                <div className="p-5 border-b border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-gradient-to-br from-pink-500 to-purple-500 rounded-xl flex items-center justify-center">
+                            <Sparkles className="w-4 h-4 text-white" />
+                        </div>
+                        <h2 className="text-lg font-bold text-white">Create Post</h2>
+                    </div>
+                    <button 
+                        onClick={onClose} 
+                        className="p-2 hover:bg-white/5 rounded-xl transition-colors"
+                    >
+                        <X className="w-5 h-5 text-gray-400" />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6">
-                    {/* User Info */}
-                    <div className="flex items-center gap-3 mb-6">
-                        <img
-                            src={currentUser?.photoURL || `https://ui-avatars.com/api/?name=${currentUser?.email}`}
-                            className="w-10 h-10 rounded-full object-cover"
-                            alt=""
-                        />
-                        <div>
-                            <p className="font-semibold text-gray-900 dark:text-white">
-                                {currentUser?.displayName || currentUser?.email.split('@')[0]}
-                            </p>
-                            <p className="text-xs text-gray-500">Posting to Public Feed</p>
+                <div className="flex-1 overflow-y-auto">
+                    {/* User Info & Visibility */}
+                    <div className="p-5 border-b border-white/5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <img
+                                    src={currentUser?.photoURL || `https://ui-avatars.com/api/?name=${currentUser?.email}`}
+                                    className="w-10 h-10 rounded-full object-cover ring-2 ring-pink-500/30"
+                                    alt=""
+                                />
+                                <div>
+                                    <p className="font-semibold text-white text-sm">
+                                        {currentUser?.displayName || currentUser?.email.split('@')[0]}
+                                    </p>
+                                    <select
+                                        value={visibility}
+                                        onChange={(e) => setVisibility(e.target.value)}
+                                        className="text-xs text-gray-400 bg-transparent border-none outline-none cursor-pointer hover:text-white transition-colors"
+                                    >
+                                        <option value="public" className="bg-gray-900">🌍 Public</option>
+                                        <option value="followers" className="bg-gray-900">👥 Followers</option>
+                                        <option value="private" className="bg-gray-900">🔒 Only me</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     {/* Content Type Tabs */}
-                    <div className="flex gap-2 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-                        <button
-                            onClick={() => setActiveTab('media')}
-                            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'media' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                        >
-                            <Image className="w-4 h-4" /> Media
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('code')}
-                            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'code' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                        >
-                            <Code className="w-4 h-4" /> Code Snippet
-                        </button>
+                    <div className="p-4 border-b border-white/5">
+                        <div className="flex gap-2 bg-white/5 p-1 rounded-xl">
+                            <button
+                                onClick={() => setActiveTab('media')}
+                                className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2 ${
+                                    activeTab === 'media' 
+                                        ? 'bg-gradient-to-r from-pink-500/20 to-purple-500/20 text-white border border-pink-500/30' 
+                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
+                            >
+                                <Image className="w-4 h-4" /> Media
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('code')}
+                                className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2 ${
+                                    activeTab === 'code' 
+                                        ? 'bg-gradient-to-r from-pink-500/20 to-purple-500/20 text-white border border-pink-500/30' 
+                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
+                            >
+                                <Code className="w-4 h-4" /> Code
+                            </button>
+                        </div>
                     </div>
 
                     {/* Main Input Area */}
-                    <div className="space-y-4">
+                    <div className="p-5 space-y-4">
                         <textarea
                             value={caption}
                             onChange={(e) => setCaption(e.target.value)}
-                            placeholder="What do you want to share today?"
-                            className="w-full text-base bg-transparent border-none focus:ring-0 placeholder-gray-400 text-gray-900 dark:text-white resize-none min-h-[80px]"
+                            placeholder="Share your learning journey..."
+                            className="w-full text-base bg-transparent border-none focus:ring-0 placeholder-gray-500 text-white resize-none min-h-[100px] outline-none"
+                            autoFocus
                         />
 
                         {activeTab === 'media' && (
@@ -166,24 +194,24 @@ export default function CreatePostModal({ onClose }) {
                                 {!previewUrl ? (
                                     <div
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                                        className="border-2 border-dashed border-white/10 rounded-2xl p-10 flex flex-col items-center justify-center cursor-pointer hover:border-pink-500/30 hover:bg-white/[0.02] transition-all group"
                                     >
-                                        <div className="w-12 h-12 bg-primary-50 dark:bg-primary-900/20 rounded-full flex items-center justify-center mb-3">
-                                            <Image className="w-6 h-6 text-primary-600" />
+                                        <div className="w-14 h-14 bg-gradient-to-br from-pink-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                            <Image className="w-7 h-7 text-pink-400" />
                                         </div>
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">Add Photos or Video</p>
-                                        <p className="text-xs text-gray-500 mt-1">or drag and drop</p>
+                                        <p className="text-sm font-medium text-white mb-1">Add photos or videos</p>
+                                        <p className="text-xs text-gray-500">or drag and drop</p>
                                     </div>
                                 ) : (
-                                    <div className="relative rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+                                    <div className="relative rounded-2xl overflow-hidden bg-black">
                                         {selectedFile?.type.startsWith('image') ? (
-                                            <img src={previewUrl} alt="Preview" className="w-full max-h-[300px] object-cover" />
+                                            <img src={previewUrl} alt="Preview" className="w-full max-h-[300px] object-contain" />
                                         ) : (
                                             <video src={previewUrl} controls className="w-full max-h-[300px]" />
                                         )}
                                         <button
                                             onClick={clearFile}
-                                            className="absolute top-2 right-2 text-white/80 hover:text-white bg-black/50 rounded-full p-1"
+                                            className="absolute top-3 right-3 text-white/80 hover:text-white bg-black/50 backdrop-blur-sm rounded-full p-2 hover:bg-black/70 transition-colors"
                                         >
                                             <XCircle className="w-5 h-5" />
                                         </button>
@@ -202,14 +230,14 @@ export default function CreatePostModal({ onClose }) {
                         {activeTab === 'code' && (
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Language</label>
+                                    <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Language</label>
                                     <select
                                         value={codeLanguage}
                                         onChange={(e) => setCodeLanguage(e.target.value)}
-                                        className="text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 outline-none focus:border-primary-500 text-gray-900 dark:text-white"
+                                        className="text-sm bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 outline-none focus:border-pink-500/50 text-white"
                                     >
                                         {languages.map(lang => (
-                                            <option key={lang.id} value={lang.id}>{lang.name}</option>
+                                            <option key={lang.id} value={lang.id} className="bg-gray-900">{lang.name}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -217,32 +245,40 @@ export default function CreatePostModal({ onClose }) {
                                     value={codeSnippet}
                                     onChange={(e) => setCodeSnippet(e.target.value)}
                                     placeholder="// Paste your code here..."
-                                    className="w-full h-48 font-mono text-sm bg-gray-800 text-green-400 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                                    className="w-full h-48 font-mono text-sm bg-black/50 text-emerald-400 p-4 rounded-xl border border-white/5 focus:border-pink-500/30 focus:outline-none resize-none"
                                     spellCheck={false}
                                 />
                             </div>
                         )}
 
                         {/* Tags Input */}
-                        <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800">
-                            <Hash className="w-4 h-4 text-gray-400" />
+                        <div className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-white/5 rounded-xl hover:border-pink-500/30 transition-colors">
+                            <Hash className="w-4 h-4 text-pink-400" />
                             <input
                                 type="text"
                                 value={tags}
                                 onChange={(e) => setTags(e.target.value)}
-                                placeholder="Add tags (separated by comma)..."
-                                className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder-gray-400 text-gray-900 dark:text-white"
+                                placeholder="Add tags separated by commas..."
+                                className="flex-1 bg-transparent border-none outline-none text-sm placeholder-gray-500 text-white"
                             />
                         </div>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+                <div className="p-5 border-t border-white/5 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <button className="p-2.5 hover:bg-white/5 rounded-xl transition-colors text-gray-400 hover:text-pink-400">
+                            <Image className="w-5 h-5" />
+                        </button>
+                        <button className="p-2.5 hover:bg-white/5 rounded-xl transition-colors text-gray-400 hover:text-purple-400">
+                            <Video className="w-5 h-5" />
+                        </button>
+                    </div>
                     <button
                         onClick={handleSubmit}
-                        disabled={isPosting || (!caption && !selectedFile && !codeSnippet)}
-                        className="btn-primary rounded-lg px-6 py-2.5 font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        disabled={isPosting || (!caption.trim() && !selectedFile && !codeSnippet.trim())}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-pink-500 to-purple-500 rounded-xl text-white font-semibold shadow-lg shadow-pink-500/20 hover:shadow-pink-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-pink-500/20"
                     >
                         {isPosting ? (
                             <>
